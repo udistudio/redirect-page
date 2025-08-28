@@ -28,47 +28,41 @@
     <input id="pw" type="password" required autocomplete="current-password" autofocus>
     <button type="submit">כניסה</button>
     <div class="err" id="err"></div>
-    <div class="hint">שגיאה? ודאו שאין רווחים מיותרים.</div>
+    <div class="hint">טיפ: הסיסמה היא מספר בן 4 ספרות.</div>
     <div class="footer">© Arduino Kurs</div>
   </form>
 
   <script>
-    // === הגדרות שלך ===
-    const PASSWORD_SHA256_HEX = '0581fd688d7aee6463c55b053661a94bdc4badef25a23514cfe2621397012f35'; // האש של הסיסמה
-    const TARGET_URL = 'https://sites.google.com/view/arduino-course-private';     // כתובת היעד אם הסיסמה נכונה
+    // === הגדרות ===
+    const PASSWORD_SHA256_HEX = 'f6c2e8d7f5ed3a3b9f3a8e7b40e6a57f05a40308d37617a08657b6f0c674f9f6';
+    const TARGET_URL = 'https://sites.google.com/view/arduino-course-private';  // << כאן לשים את היעד האמיתי
 
-    // === עזר: חישוב SHA-256 בלקוח והמרה ל-hex ===
     async function sha256Hex(str) {
       const enc = new TextEncoder().encode(str);
       const buf = await crypto.subtle.digest('SHA-256', enc);
       return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,'0')).join('');
     }
-
-    // מניעת הדבקה של רווחים לא מכוונים בתחילת/סוף
     function sanitize(s){ return s.replace(/^\s+|\s+$/g,''); }
 
-    // ניסיון בסיסי להקשות על ניחוש (נעילת כמה שניות אחרי X טעויות)
     let fails = 0, lockUntil = 0;
-    function locked() { return Date.now() < lockUntil; }
+    const locked = () => Date.now() < lockUntil;
 
     document.getElementById('gate').addEventListener('submit', async (e) => {
       e.preventDefault();
       const err = document.getElementById('err');
-      if (locked()) { err.textContent = 'נחסמת זמנית, נסו שוב בעוד מספר שניות.'; return; }
-
+      if (locked()) { err.textContent = 'נחסמת זמנית, נסה שוב בעוד כמה שניות.'; return; }
       const pw = sanitize(document.getElementById('pw').value);
       try {
         const hex = await sha256Hex(pw);
         if (hex === PASSWORD_SHA256_HEX) {
-          // הפניה מיידית
           location.replace(TARGET_URL);
         } else {
           fails++;
           if (fails >= 5) { lockUntil = Date.now() + 15000; fails = 0; }
           err.textContent = 'סיסמה שגויה';
         }
-      } catch (e) {
-        err.textContent = 'שגיאה לא צפויה. נסו שוב.';
+      } catch {
+        err.textContent = 'שגיאה לא צפויה. נסה שוב.';
       }
     });
   </script>
