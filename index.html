@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>כניסה | Arduino Kurs</title>
+  <style>
+    :root { --bg:#0f172a; --card:#111827; --fg:#e5e7eb; --muted:#94a3b8; --err:#fca5a5; --brand:#2563eb; }
+    html,body{height:100%}
+    body{margin:0; display:grid; place-items:center; background:var(--bg); color:var(--fg); font-family:system-ui, Arial, sans-serif;}
+    .card{background:var(--card); width:min(92%,440px); padding:28px; border-radius:16px; box-shadow:0 8px 30px rgba(0,0,0,.35)}
+    h1{margin:0 0 8px; font-size:1.35rem}
+    p{margin:.25rem 0 .9rem; color:var(--muted)}
+    label{display:block; margin:.5rem 0 .25rem; font-weight:600}
+    input[type=password]{width:100%; padding:12px; border-radius:10px; border:1px solid #334155; background:#0b1220; color:var(--fg)}
+    button{margin-top:12px; width:100%; padding:12px 16px; border:0; border-radius:10px; background:var(--brand); color:#fff; font-weight:700; cursor:pointer}
+    .err{margin-top:.5rem; color:var(--err); min-height:1.2em}
+    .hint{margin-top:.5rem; font-size:.85rem; color:var(--muted)}
+    .footer{margin-top:14px; font-size:.8rem; color:var(--muted)}
+  </style>
+</head>
+<body>
+  <form class="card" id="gate">
+    <h1>כניסה לאתר הקורס</h1>
+    <p>אנא הזינו סיסמה כדי להמשיך.</p>
+    <label for="pw">סיסמה</label>
+    <input id="pw" type="password" required autocomplete="current-password" autofocus>
+    <button type="submit">כניסה</button>
+    <div class="err" id="err"></div>
+    <div class="hint">שגיאה? ודאו שאין רווחים מיותרים.</div>
+    <div class="footer">© Arduino Kurs</div>
+  </form>
+
+  <script>
+    // === הגדרות שלך ===
+    const PASSWORD_SHA256_HEX = '0825'; // האש של הסיסמה
+    const TARGET_URL = 'https://sites.google.com/view/arduino-course-private';     // כתובת היעד אם הסיסמה נכונה
+
+    // === עזר: חישוב SHA-256 בלקוח והמרה ל-hex ===
+    async function sha256Hex(str) {
+      const enc = new TextEncoder().encode(str);
+      const buf = await crypto.subtle.digest('SHA-256', enc);
+      return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,'0')).join('');
+    }
+
+    // מניעת הדבקה של רווחים לא מכוונים בתחילת/סוף
+    function sanitize(s){ return s.replace(/^\s+|\s+$/g,''); }
+
+    // ניסיון בסיסי להקשות על ניחוש (נעילת כמה שניות אחרי X טעויות)
+    let fails = 0, lockUntil = 0;
+    function locked() { return Date.now() < lockUntil; }
+
+    document.getElementById('gate').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const err = document.getElementById('err');
+      if (locked()) { err.textContent = 'נחסמת זמנית, נסו שוב בעוד מספר שניות.'; return; }
+
+      const pw = sanitize(document.getElementById('pw').value);
+      try {
+        const hex = await sha256Hex(pw);
+        if (hex === PASSWORD_SHA256_HEX) {
+          // הפניה מיידית
+          location.replace(TARGET_URL);
+        } else {
+          fails++;
+          if (fails >= 5) { lockUntil = Date.now() + 15000; fails = 0; }
+          err.textContent = 'סיסמה שגויה';
+        }
+      } catch (e) {
+        err.textContent = 'שגיאה לא צפויה. נסו שוב.';
+      }
+    });
+  </script>
+</body>
+</html>
